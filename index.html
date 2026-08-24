@@ -13,6 +13,11 @@
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
+    <!-- Firebase SDKs (Compat v10) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
     <style>
         :root {
             --bg-beige: #f6f1e9;
@@ -259,6 +264,11 @@
         .btn-vintage:hover {
             background-color: var(--accent-gold);
             color: var(--dark-text);
+        }
+
+        .btn-vintage:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
         }
 
         .btn-rose {
@@ -722,7 +732,7 @@
                                 <input type="file" id="bfPhoto" accept="image/*" onchange="updateFileName(this, 'bfFileLabel')">
                             </div>
                         </div>
-                        <button type="submit" class="btn-vintage"><i class="fa-solid fa-heart"></i> Publicar para Valita</button>
+                        <button type="submit" id="bfSubmitBtn" class="btn-vintage"><i class="fa-solid fa-heart"></i> Publicar para Valita</button>
                     </form>
                 </div>
             </div>
@@ -764,7 +774,7 @@
                 </div>
 
                 <div style="text-align: center;">
-                    <button type="submit" class="btn-vintage">
+                    <button type="submit" id="guestSubmitBtn" class="btn-vintage">
                         <i class="fa-solid fa-paper-plane"></i> Publicar Mensaje
                     </button>
                 </div>
@@ -817,9 +827,29 @@
     </footer>
 
     <script>
-        const BOYFRIEND_PASSWORD = "081225"; 
+        // ==========================================
+        // 1. CONFIGURACIÓN DE FIREBASE DIRECTA
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7IHtBw88MgHLXl7GDTHUPxUqmOXUNW1c",
+            authDomain: "los-21-de-valita.firebaseapp.com",
+            projectId: "los-21-de-valita",
+            storageBucket: "los-21-de-valita.firebasestorage.app",
+            messagingSenderId: "150352327084",
+            appId: "1:150352327084:web:25e7f77a663fec10ec8a09"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        const BOYFRIEND_PASSWORD = "TU_CLAVE_AQUI"; 
         let countdownConfettiTriggered = false;
         let currentFilter = 'all';
+        let allPosts = [];
 
         function launchWelcomeConfetti() {
             if (typeof confetti === 'function') {
@@ -955,17 +985,38 @@
             });
         }
 
-        function getPosts() {
-            const saved = localStorage.getItem('valita_clean_wall_v1');
-            return saved ? JSON.parse(saved) : [];
+        // ==========================================
+        // 2. FIRESTORE: TIEMPO REAL Y ACCIONES
+        // ==========================================
+        function initRealtimeWall() {
+            db.collection("posts")
+              .orderBy("timestamp", "desc")
+              .onSnapshot((snapshot) => {
+                  allPosts = [];
+                  snapshot.forEach((doc) => {
+                      allPosts.push({
+                          id: doc.id,
+                          ...doc.data()
+                      });
+                  });
+                  renderWall();
+              }, (error) => {
+                  console.error("Error al escuchar posts de Firestore:", error);
+              });
         }
 
-        function deletePost(id) {
-            if (confirm("¿Estás seguro de que deseas eliminar este recuerdo del muro?")) {
-                let posts = getPosts();
-                posts = posts.filter(post => post.id !== id);
-                localStorage.setItem('valita_clean_wall_v1', JSON.stringify(posts));
-                renderWall();
+        async function deletePost(id) {
+            const pwd = prompt("Para eliminar este recuerdo, ingresa la clave de administrador:");
+            if (pwd === BOYFRIEND_PASSWORD) {
+                try {
+                    await db.collection("posts").doc(id).delete();
+                    alert("Recuerdo eliminado.");
+                } catch (error) {
+                    console.error("Error al eliminar:", error);
+                    alert("Hubo un error al eliminar.");
+                }
+            } else if (pwd !== null) {
+                alert("Clave incorrecta. No se puede eliminar.");
             }
         }
 
@@ -985,9 +1036,8 @@
             const searchInput = document.getElementById('wallSearchInput');
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             
-            let posts = getPosts();
+            let posts = [...allPosts];
 
-            // Filtrado por categoría
             if (currentFilter === 'boyfriend') {
                 posts = posts.filter(p => p.isBoyfriend);
             } else if (currentFilter === 'friends') {
@@ -996,7 +1046,6 @@
                 posts = posts.filter(p => p.image);
             }
 
-            // Filtrado por buscador
             if (searchTerm) {
                 posts = posts.filter(p => 
                     (p.author && p.author.toLowerCase().includes(searchTerm)) ||
@@ -1036,6 +1085,7 @@
                     img.src = post.image;
                     img.className = 'polaroid-img';
                     img.alt = 'Recuerdo';
+                    img.loading = "lazy";
                     card.appendChild(img);
                 }
 
@@ -1058,95 +1108,90 @@
             });
         }
 
-        function fileToBase64(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const scale = MAX_WIDTH / img.width;
-                        if (scale < 1) {
-                            canvas.width = MAX_WIDTH;
-                            canvas.height = img.height * scale;
-                        } else {
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                        }
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                    };
-                };
-            });
+        async function uploadFileToStorage(file) {
+            const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+            const storageRef = storage.ref(`muro/${cleanFileName}`);
+            const snapshot = await storageRef.put(file);
+            return await snapshot.ref.getDownloadURL();
         }
 
         async function handlePublicSubmit(event) {
             event.preventDefault();
+            const submitBtn = document.getElementById('guestSubmitBtn');
             const name = document.getElementById('guestName').value;
             const message = document.getElementById('guestMessage').value;
             const photoInput = document.getElementById('guestPhoto');
 
-            let imageBase64 = null;
-            if (photoInput.files && photoInput.files[0]) {
-                imageBase64 = await fileToBase64(photoInput.files[0]);
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publicando...';
+
+            try {
+                let imageUrl = null;
+                if (photoInput.files && photoInput.files[0]) {
+                    imageUrl = await uploadFileToStorage(photoInput.files[0]);
+                }
+
+                await db.collection("posts").add({
+                    author: name,
+                    isBoyfriend: false,
+                    message: message,
+                    image: imageUrl,
+                    date: "26 de Agosto",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                document.getElementById('publicGuestbookForm').reset();
+                document.getElementById('publicFileLabel').innerHTML = '<i class="fa-solid fa-upload"></i> Haz clic aquí para subir una foto';
+                alert('¡Tu mensaje ha sido publicado en el muro de Valita!');
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("Ocurrió un error al enviar el mensaje. Intenta de nuevo.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publicar Mensaje';
             }
-
-            const newPost = {
-                id: Date.now(),
-                author: name,
-                isBoyfriend: false,
-                message: message,
-                image: imageBase64,
-                date: "26 de Agosto"
-            };
-
-            const posts = getPosts();
-            posts.unshift(newPost);
-            localStorage.setItem('valita_clean_wall_v1', JSON.stringify(posts));
-
-            renderWall();
-            document.getElementById('publicGuestbookForm').reset();
-            document.getElementById('publicFileLabel').innerHTML = '<i class="fa-solid fa-upload"></i> Haz clic aquí para subir una foto';
-            alert('¡Tu mensaje ha sido publicado en el muro de Valita!');
         }
 
         async function handleBoyfriendSubmit(event) {
             event.preventDefault();
+            const submitBtn = document.getElementById('bfSubmitBtn');
             const message = document.getElementById('bfMessage').value;
             const photoInput = document.getElementById('bfPhoto');
 
-            let imageBase64 = null;
-            if (photoInput.files && photoInput.files[0]) {
-                imageBase64 = await fileToBase64(photoInput.files[0]);
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publicando...';
+
+            try {
+                let imageUrl = null;
+                if (photoInput.files && photoInput.files[0]) {
+                    imageUrl = await uploadFileToStorage(photoInput.files[0]);
+                }
+
+                await db.collection("posts").add({
+                    author: "Tu Enamorado",
+                    isBoyfriend: true,
+                    message: message,
+                    image: imageUrl,
+                    date: "26 de Agosto",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                document.getElementById('bfUploadForm').reset();
+                document.getElementById('bfFileLabel').innerHTML = '<i class="fa-solid fa-camera"></i> Seleccionar foto de galería';
+                toggleBoyfriendForm();
+                alert('¡Tu nota especial ha sido publicada en el muro!');
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("Ocurrió un error al publicar.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-heart"></i> Publicar para Valita';
             }
-
-            const newPost = {
-                id: Date.now(),
-                author: "Tu Enamorado",
-                isBoyfriend: true,
-                message: message,
-                image: imageBase64,
-                date: "26 de Agosto"
-            };
-
-            const posts = getPosts();
-            posts.unshift(newPost);
-            localStorage.setItem('valita_clean_wall_v1', JSON.stringify(posts));
-
-            renderWall();
-            document.getElementById('bfUploadForm').reset();
-            document.getElementById('bfFileLabel').innerHTML = '<i class="fa-solid fa-camera"></i> Seleccionar foto de galería';
-            toggleBoyfriendForm();
-            alert('¡Tu nota especial ha sido publicada en el muro!');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             renderReasons();
-            renderWall();
+            initRealtimeWall();
             setTimeout(launchWelcomeConfetti, 400);
         });
     </script>
