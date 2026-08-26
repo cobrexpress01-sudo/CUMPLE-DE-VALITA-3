@@ -13,7 +13,7 @@
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <!-- Firebase SDKs (Solo App y Firestore, sin Storage) -->
+    <!-- Firebase SDKs (Compat v10) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -149,6 +149,15 @@
             animation: pulse 1.5s infinite;
         }
 
+        .waiting-msg-box {
+            margin-top: 25px;
+            padding: 15px;
+            border-top: 1px dashed var(--border-color);
+            font-family: 'Caveat', cursive;
+            font-size: 1.4rem;
+            color: var(--vintage-brown);
+        }
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -199,10 +208,12 @@
 
         /* Boyfriend Special Section */
         .boyfriend-section {
+            display: none;
             background-color: #f3ece1;
             border: 2px solid var(--accent-gold);
             position: relative;
             overflow: hidden;
+            animation: fadeIn 1s ease;
         }
 
         .boyfriend-ribbon {
@@ -242,6 +253,44 @@
             text-align: center;
             border-top: 1px dashed var(--border-color);
             padding-top: 20px;
+        }
+
+        /* Password Unlock Section for Rest of Site */
+        .unlock-rest-section {
+            display: none;
+            text-align: center;
+            background-color: var(--card-beige);
+            border: 2px dashed var(--accent-gold);
+            border-radius: 6px;
+            padding: 30px 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .unlock-rest-section h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--vintage-brown);
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+        }
+
+        .unlock-form-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            max-width: 450px;
+            margin: 20px auto 0 auto;
+        }
+
+        /* Protected Content Wrapper */
+        #protectedFullContent {
+            display: none;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .btn-vintage {
@@ -599,6 +648,7 @@
             .wall-controls,
             .file-upload-wrapper,
             .reasons-section,
+            .unlock-rest-section,
             .no-print {
                 display: none !important;
             }
@@ -634,17 +684,22 @@
             .reasons-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
+            .unlock-form-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
 
+    <!-- Header Section -->
     <header>
         <div class="stamp-badge"><i class="fa-solid fa-stamp"></i> Edición Especial</div>
         <h1 class="main-title">Cumpleaños de Valita</h1>
         <p class="subtitle">Celebrando 21 años de una vida radiante y especial</p>
         <p class="date-badge">26 de Agosto</p>
 
+        <!-- Countdown Banner -->
         <div class="countdown-card">
             <div id="countdownHeaderTitle" class="countdown-title">
                 <i class="fa-solid fa-clock-rotate-left"></i> Cuenta Regresiva para el Gran Día
@@ -670,21 +725,26 @@
             <div id="birthdayArrivedMsg" class="birthday-arrived-msg">
                 🎉 ¡HOY ES EL CUMPLEAÑOS DE VALITA! ¡FELICES 21 AÑOS! 🎂✨
             </div>
+            <div id="waitingMsg" class="waiting-msg-box">
+                ⏳ El contenido sorpresa se desbloqueará exactamente al terminar la cuenta regresiva... ✨
+            </div>
         </div>
     </header>
 
     <div class="container">
 
-        <div class="vintage-card boyfriend-section">
+        <!-- Boyfriend Special Section (Aparece en AUTOMÁTICO al terminar la cuenta) -->
+        <div id="boyfriendSectionCard" class="vintage-card boyfriend-section">
             <div class="boyfriend-ribbon">Para mi amor</div>
             <h2 class="section-title"><i class="fa-solid fa-heart" style="color: var(--rose-dust);"></i> De Mi Parte Para Ti</h2>
             
             <div class="letter-content">
-                Felices 21 años, mi niña hermosa. 
+                Felices 21 añitos, mi flaquita hermosa.
 
-                Hoy celebras una edad mágica, y no hay nada en el mundo que me haga más feliz que estar a tu lado para verlo. Gracias por iluminar mis días con tu sonrisa, por tu ternura constante y por ser esa persona tan increíble que llena de alegría la vida de todos los que te rodean.
+                Hoy celebramos un dia mágico, y no hay nada en el mundo que me haga más feliz que estar a tu lado en momentos tan importantes como estos. Gracias por iluminar mis días con tu sonrisa, por tu ternura constante, por amarme tan bonito y por ser esa persona tan increíble que llena de alegría la vida de todos los que te rodean.
 
-                En esta nueva etapa deseo que cumplas cada uno de tus sueños, que sigas creciendo como la mujer maravillosa que eres y que siempre recuerdes lo mucho que te amo y te admiro. Este espacio es solo un pequeño reflejo de todo el cariño que te tenemos.
+                En esta nueva etapa deseo que cumplas cada uno de tus sueños, que sigas creciendo como la mujer maravillosa que eres y que siempre recuerdes lo mucho que te amo y te admiro. Que sepas que estaré contigo en todo y para lo que necesites &lt;3
+                Este espacio es solo un pequeño reflejo de todo el cariño que te tengo y te tenemos.
 
                 ¡Que este día esté lleno de amor, abrazos y recuerdos inolvidables!
             </div>
@@ -693,30 +753,11 @@
 
             <div class="boyfriend-actions">
                 <button class="btn-vintage btn-rose" onclick="toggleBoyfriendForm()">
-                    <i class="fa-solid fa-lock"></i> Acceso Privado (Solo Enamorado)
+                    <i class="fa-solid fa-camera"></i> Publicar recuerdo especial
                 </button>
 
                 <div id="boyfriendForm" class="secret-upload-box">
-                    <h3 style="font-family:'Playfair Display'; color:var(--vintage-brown); margin-bottom:10px;">
-                        <i class="fa-solid fa-key"></i> Rincón Exclusivo del Enamorado
-                    </h3>
-                    
-                    <div id="bfLoginStep">
-                        <p style="font-size:0.9rem; margin-bottom:15px; color:var(--vintage-brown);">
-                            Ingresa la clave de acceso para publicar contenido especial:
-                        </p>
-                        <div class="form-group">
-                            <input type="password" id="bfPasswordInput" placeholder="Ingresa tu clave secreta...">
-                        </div>
-                        <button type="button" class="btn-vintage" onclick="verifyBoyfriendPassword()">
-                            <i class="fa-solid fa-unlock"></i> Desbloquear
-                        </button>
-                    </div>
-
-                    <form id="bfUploadForm" style="display: none;" onsubmit="handleBoyfriendSubmit(event)">
-                        <p style="font-size:0.85rem; margin-bottom:15px; color:green; font-weight: bold;">
-                            <i class="fa-solid fa-circle-check"></i> Acceso autorizado como Enamorado.
-                        </p>
+                    <form id="bfUploadForm" onsubmit="handleBoyfriendSubmit(event)">
                         <div class="form-group">
                             <label>Tu Mensaje o Nota de Amor:</label>
                             <textarea id="bfMessage" rows="3" placeholder="Escribe algo dulce para Valita..." required></textarea>
@@ -734,81 +775,103 @@
             </div>
         </div>
 
-        <div class="vintage-card reasons-section no-print">
-            <h2 class="section-title">21 Motivos por los que te Amo</h2>
-            <p style="text-align:center; font-style: italic; color: #666; margin-bottom: 15px;">
-                Toca cada sobrecito para descubrir una razón especial ✨
+        <!-- Password Unlock Banner for the rest of the site -->
+        <div id="unlockRestSection" class="unlock-rest-section no-print">
+            <h3><i class="fa-solid fa-lock"></i> Muro de Recuerdos & Sorpresas Protegidas</h3>
+            <p style="font-size: 0.95rem; color: #555;">
+                Ingresa la contraseña especial de Valita para ver los 21 motivos y el muro interactivo completo:
             </p>
-            <div id="reasonsGrid" class="reasons-grid"></div>
+            <div class="unlock-form-group">
+                <input type="password" id="siteAccessPassword" placeholder="Contraseña de acceso..." style="background: white;">
+                <button type="button" class="btn-vintage" onclick="unlockFullSite()">
+                    <i class="fa-solid fa-key"></i> Desbloquear
+                </button>
+            </div>
         </div>
 
-        <div class="vintage-card no-print">
-            <h2 class="section-title">Déjale un Mensaje o Recuerdo</h2>
-            <p style="text-align: center; font-style: italic; margin-bottom: 20px; color: #666;">
-                ¿Eres amigo o familiar de Valita? ¡Sube una foto y un bonito deseo para sus 21 años!
-            </p>
+        <!-- Protected Content (21 Motivos + Guestbook Form + Polaroid Wall) -->
+        <div id="protectedFullContent">
+            
+            <!-- 21 Motivos para Amarte -->
+            <div class="vintage-card reasons-section no-print">
+                <h2 class="section-title">21 Motivos por los que te Amo</h2>
+                <p style="text-align:center; font-style: italic; color: #666; margin-bottom: 15px;">
+                    Toca cada sobrecito para descubrir una razón especial ✨
+                </p>
+                <div id="reasonsGrid" class="reasons-grid"></div>
+            </div>
 
-            <form id="publicGuestbookForm" onsubmit="handlePublicSubmit(event)">
-                <div class="form-group">
-                    <label for="guestName"><i class="fa-solid fa-user"></i> Tu Nombre:</label>
-                    <input type="text" id="guestName" placeholder="Ej. Tu amiga Maria / Tío Carlos" required>
-                </div>
+            <!-- Guestbook Section -->
+            <div class="vintage-card no-print">
+                <h2 class="section-title">Déjale un Mensaje o Recuerdo</h2>
+                <p style="text-align: center; font-style: italic; margin-bottom: 20px; color: #666;">
+                    ¿Eres amigo o familiar de Valita? ¡Sube una foto y un bonito deseo para sus 21 años!
+                </p>
 
-                <div class="form-group">
-                    <label for="guestMessage"><i class="fa-solid fa-comment"></i> Tu Mensaje de Cumpleaños:</label>
-                    <textarea id="guestMessage" rows="3" placeholder="¡Feliz cumpleaños Valita! Deseo que..." required></textarea>
-                </div>
+                <form id="publicGuestbookForm" onsubmit="handlePublicSubmit(event)">
+                    <div class="form-group">
+                        <label for="guestName"><i class="fa-solid fa-user"></i> Tu Nombre:</label>
+                        <input type="text" id="guestName" placeholder="Ej. Tu amiga Maria / Tío Carlos" required>
+                    </div>
 
-                <div class="form-group">
-                    <label><i class="fa-solid fa-image"></i> Adjuntar Foto (Opcional):</label>
-                    <div class="file-upload-wrapper">
-                        <span id="publicFileLabel"><i class="fa-solid fa-upload"></i> Haz clic aquí para subir una foto</span>
-                        <input type="file" id="guestPhoto" accept="image/*" onchange="updateFileName(this, 'publicFileLabel')">
+                    <div class="form-group">
+                        <label for="guestMessage"><i class="fa-solid fa-comment"></i> Tu Mensaje de Cumpleaños:</label>
+                        <textarea id="guestMessage" rows="3" placeholder="¡Feliz cumpleaños Valita! Deseo que..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-image"></i> Adjuntar Foto (Opcional):</label>
+                        <div class="file-upload-wrapper">
+                            <span id="publicFileLabel"><i class="fa-solid fa-upload"></i> Haz clic aquí para subir una foto</span>
+                            <input type="file" id="guestPhoto" accept="image/*" onchange="updateFileName(this, 'publicFileLabel')">
+                        </div>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button type="submit" id="guestSubmitBtn" class="btn-vintage">
+                            <i class="fa-solid fa-paper-plane"></i> Publicar Mensaje
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Polaroid Wall -->
+            <div class="vintage-card">
+                <h2 class="section-title">Muro de Recuerdos y Felicitaciones</h2>
+                
+                <div class="wall-controls no-print">
+                    <div class="search-bar-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="wallSearchInput" class="search-input" placeholder="Buscar por nombre o palabra..." oninput="handleSearchFilter()">
+                    </div>
+                    <div class="filters-group">
+                        <button type="button" class="filter-btn active" onclick="setWallFilter('all', this)">
+                            <i class="fa-solid fa-border-all"></i> Todos
+                        </button>
+                        <button type="button" class="filter-btn" onclick="setWallFilter('boyfriend', this)">
+                            <i class="fa-solid fa-heart"></i> De su Enamorado
+                        </button>
+                        <button type="button" class="filter-btn" onclick="setWallFilter('friends', this)">
+                            <i class="fa-solid fa-users"></i> Amigos / Familia
+                        </button>
+                        <button type="button" class="filter-btn" onclick="setWallFilter('photos', this)">
+                            <i class="fa-solid fa-camera"></i> Solo con Foto
+                        </button>
                     </div>
                 </div>
 
-                <div style="text-align: center;">
-                    <button type="submit" id="guestSubmitBtn" class="btn-vintage">
-                        <i class="fa-solid fa-paper-plane"></i> Publicar Mensaje
-                    </button>
-                </div>
-            </form>
-        </div>
+                <div id="polaroidWall" class="polaroid-grid"></div>
 
-        <div class="vintage-card">
-            <h2 class="section-title">Muro de Recuerdos y Felicitaciones</h2>
-            
-            <div class="wall-controls no-print">
-                <div class="search-bar-wrapper">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="wallSearchInput" class="search-input" placeholder="Buscar por nombre o palabra..." oninput="handleSearchFilter()">
-                </div>
-                <div class="filters-group">
-                    <button type="button" class="filter-btn active" onclick="setWallFilter('all', this)">
-                        <i class="fa-solid fa-border-all"></i> Todos
+                <div style="text-align: center; margin-top: 35px;" class="no-print">
+                    <button class="btn-vintage btn-pdf" onclick="downloadMemoryPDF()">
+                        <i class="fa-solid fa-file-pdf"></i> Guardar / Descargar Álbum de Recuerdos en PDF
                     </button>
-                    <button type="button" class="filter-btn" onclick="setWallFilter('boyfriend', this)">
-                        <i class="fa-solid fa-heart"></i> De su Enamorado
-                    </button>
-                    <button type="button" class="filter-btn" onclick="setWallFilter('friends', this)">
-                        <i class="fa-solid fa-users"></i> Amigos / Familia
-                    </button>
-                    <button type="button" class="filter-btn" onclick="setWallFilter('photos', this)">
-                        <i class="fa-solid fa-camera"></i> Solo con Foto
-                    </button>
+                    <p style="font-size: 0.82rem; color: #777; margin-top: 8px;">
+                        * Descarga un PDF maquetado como un fotolibro limpio con la carta y todos los recuerdos.
+                    </p>
                 </div>
             </div>
 
-            <div id="polaroidWall" class="polaroid-grid"></div>
-
-            <div style="text-align: center; margin-top: 35px;" class="no-print">
-                <button class="btn-vintage btn-pdf" onclick="downloadMemoryPDF()">
-                    <i class="fa-solid fa-file-pdf"></i> Guardar / Descargar Álbum de Recuerdos en PDF
-                </button>
-                <p style="font-size: 0.82rem; color: #777; margin-top: 8px;">
-                    * Descarga un PDF maquetado como un fotolibro limpio con la carta y todos los recuerdos.
-                </p>
-            </div>
         </div>
 
     </div>
@@ -832,30 +895,13 @@
         }
         const db = firebase.firestore();
 
-        const BOYFRIEND_PASSWORD = "081225"; 
+        // CONTRASEÑA CONFIGURADA DIRECTA
+        const MASTER_PASSWORD = "081225"; 
+        
         let countdownConfettiTriggered = false;
         let currentFilter = 'all';
         let allPosts = [];
-
-        function launchWelcomeConfetti() {
-            if (typeof confetti === 'function') {
-                const vintageColors = ['#c5a059', '#b87d7b', '#ebdccb', '#d1beaa', '#ffffff'];
-                confetti({
-                    particleCount: 50,
-                    angle: 60,
-                    spread: 55,
-                    origin: { x: 0, y: 0.7 },
-                    colors: vintageColors
-                });
-                confetti({
-                    particleCount: 50,
-                    angle: 120,
-                    spread: 55,
-                    origin: { x: 1, y: 0.7 },
-                    colors: vintageColors
-                });
-            }
-        }
+        let isBirthdayArrived = false;
 
         function updateCountdown() {
             const now = new Date();
@@ -869,10 +915,21 @@
 
             const difference = targetDate - now;
 
+            // CUANDO LLEGA EL CUMPLEAÑOS
             if (difference <= 0 && now <= endOfBirthday) {
+                isBirthdayArrived = true;
                 document.getElementById('countdownBoxGroup').style.display = 'none';
                 document.getElementById('countdownHeaderTitle').style.display = 'none';
                 document.getElementById('birthdayArrivedMsg').style.display = 'block';
+                document.getElementById('waitingMsg').style.display = 'none';
+
+                // DESBLOQUEA TU APARTADO EN AUTOMÁTICO
+                document.getElementById('boyfriendSectionCard').style.display = 'block';
+                
+                // MUESTRA EL FORMULARIO DE CONTRASEÑA PARA EL RESTO (si aún no fue ingresada)
+                if (document.getElementById('protectedFullContent').style.display !== 'block') {
+                    document.getElementById('unlockRestSection').style.display = 'block';
+                }
 
                 if (!countdownConfettiTriggered && typeof confetti === 'function') {
                     confetti({
@@ -884,6 +941,13 @@
                 }
                 return;
             }
+
+            // ANTES DE LA FECHA (Modo Bloqueado)
+            isBirthdayArrived = false;
+            document.getElementById('boyfriendSectionCard').style.display = 'none';
+            document.getElementById('unlockRestSection').style.display = 'none';
+            document.getElementById('protectedFullContent').style.display = 'none';
+            document.getElementById('waitingMsg').style.display = 'block';
 
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -899,6 +963,18 @@
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
+        function unlockFullSite() {
+            const pwd = document.getElementById('siteAccessPassword').value;
+            if (pwd === MASTER_PASSWORD) {
+                document.getElementById('unlockRestSection').style.display = 'none';
+                document.getElementById('protectedFullContent').style.display = 'block';
+                renderWall();
+                alert('¡Sorpresa desbloqueada! 🎉 Disfruta de todos tus recuerdos.');
+            } else {
+                alert('Contraseña incorrecta. Pídesela a tu novio ✨');
+            }
+        }
+
         function downloadMemoryPDF() {
             window.print();
         }
@@ -913,16 +989,6 @@
         function toggleBoyfriendForm() {
             const box = document.getElementById('boyfriendForm');
             box.style.display = box.style.display === 'block' ? 'none' : 'block';
-        }
-
-        function verifyBoyfriendPassword() {
-            const inputPwd = document.getElementById('bfPasswordInput').value;
-            if (inputPwd === BOYFRIEND_PASSWORD) {
-                document.getElementById('bfLoginStep').style.display = 'none';
-                document.getElementById('bfUploadForm').style.display = 'block';
-            } else {
-                alert('Clave incorrecta. Acceso denegado.');
-            }
         }
 
         const reasonsList = [
@@ -990,7 +1056,7 @@
 
         async function deletePost(id) {
             const pwd = prompt("Para eliminar este recuerdo, ingresa la clave de administrador:");
-            if (pwd === BOYFRIEND_PASSWORD) {
+            if (pwd === MASTER_PASSWORD) {
                 try {
                     await db.collection("posts").doc(id).delete();
                     alert("Recuerdo eliminado.");
@@ -1016,6 +1082,7 @@
 
         function renderWall() {
             const wall = document.getElementById('polaroidWall');
+            if (!wall) return;
             const searchInput = document.getElementById('wallSearchInput');
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             
@@ -1196,7 +1263,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderReasons();
             initRealtimeWall();
-            setTimeout(launchWelcomeConfetti, 400);
         });
     </script>
 </body>
